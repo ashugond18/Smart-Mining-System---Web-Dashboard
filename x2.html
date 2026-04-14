@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Smart Mining System · Safety Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08090c;--bg1:#0d1117;--bg2:#111820;--bg3:#161d2a;--bg4:#1c2535;
+  --border:rgba(48,100,180,0.18);--border2:rgba(48,100,180,0.35);--border3:rgba(48,100,180,0.55);
+  --blue:#3b82f6;--blue-dim:rgba(59,130,246,0.15);
+  --cyan:#22d3ee;--cyan-dim:rgba(34,211,238,0.12);
+  --green:#10b981;--green-dim:rgba(16,185,129,0.12);
+  --amber:#f59e0b;--amber-dim:rgba(245,158,11,0.12);
+  --red:#ef4444;--red-dim:rgba(239,68,68,0.12);
+  --text:#94a3b8;--text2:#cbd5e1;--text3:#e2e8f0;--dim:#374151;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text2);font-family:var(--sans);font-size:13px;min-height:100vh;overflow-x:hidden;
+  background-image:linear-gradient(rgba(59,130,246,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.03) 1px,transparent 1px);
+  background-size:40px 40px;}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── TOPBAR ── */
+.topbar{background:rgba(13,17,23,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border2);height:52px;
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:300;}
+.tb-left{display:flex;align-items:center;gap:16px}
+.tb-logo{display:flex;align-items:center;gap:10px;border-right:1px solid var(--border);padding-right:16px}
+.tb-logo-icon{width:30px;height:30px;background:linear-gradient(135deg,#1d4ed8,#0891b2);border-radius:6px;
+  display:flex;align-items:center;justify-content:center}
+.tb-logo-text{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em;line-height:1.2}
+.tb-logo-sub{font-size:9px;color:var(--text);letter-spacing:.08em;text-transform:uppercase}
+.tb-breadcrumb{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--text)}
+.tb-breadcrumb span{color:var(--blue)}.tb-sep{color:var(--dim)}
+.tb-right{display:flex;align-items:center;gap:12px}
+.tb-time{font-family:var(--mono);font-size:12px;color:var(--text)}
+.tb-date{font-family:var(--mono);font-size:10px;color:var(--dim)}
+.connection-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:livepulse 2s ease-in-out infinite}
+@keyframes livepulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.8)}}
+.conn-label{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.06em}
+
+/* ── TICKER ── */
+.ticker-bar{background:var(--bg1);border-bottom:1px solid var(--border);padding:0 20px;height:28px;
+  display:flex;align-items:center;overflow:hidden;position:relative}
+.ticker-label{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.1em;padding:2px 8px;
+  border-radius:2px;margin-right:16px;white-space:nowrap;flex-shrink:0}
+.ticker-label.live{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.ticker-label.alert{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);animation:tflash .7s step-end infinite}
+@keyframes tflash{0%,100%{opacity:1}50%{opacity:.3}}
+.ticker-scroll{display:flex;gap:40px;white-space:nowrap;animation:scroll-left 30s linear infinite;
+  font-family:var(--mono);font-size:10px;color:var(--text);letter-spacing:.04em}
+@keyframes scroll-left{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ticker-item{display:inline-flex;align-items:center;gap:6px}
+.ticker-sep{color:var(--dim)}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:210px 1fr;height:calc(100vh - 80px)}
+
+/* ── SIDEBAR ── */
+.sidebar{background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;padding:16px 0}
+.sb-section{padding:0 12px;margin-bottom:18px}
+.sb-label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;padding:0 8px;margin-bottom:8px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:5px;cursor:pointer;margin-bottom:2px;
+  transition:background .2s;font-size:12px;color:var(--text);position:relative}
+.sb-item:hover{background:var(--bg2);color:var(--text2)}
+.sb-item.active{background:var(--blue-dim);color:var(--blue)}
+.sb-item.active::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:2px;background:var(--blue);border-radius:0 2px 2px 0}
+.sb-icon{width:14px;height:14px;flex-shrink:0;opacity:.7}
+.sb-badge{margin-left:auto;font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:2px}
+.sb-badge.warn{background:rgba(245,158,11,.15);color:var(--amber)}
+.sb-badge.danger{background:rgba(239,68,68,.15);color:var(--red)}
+.sb-badge.ok{background:rgba(16,185,129,.12);color:var(--green)}
+.sb-stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px;margin:0 12px 8px}
+.sb-stat-label{font-family:var(--mono);font-size:9px;color:var(--text);letter-spacing:.08em;margin-bottom:4px}
+.sb-stat-val{font-family:var(--mono);font-size:17px;font-weight:500;color:var(--text3)}
+.sb-stat-sub{font-size:10px;color:var(--text);margin-top:2px}
+.mini-bar{height:3px;background:var(--bg3);border-radius:2px;margin-top:7px;overflow:hidden}
+.mini-bar-fill{height:100%;border-radius:2px;transition:width .6s ease}
+.sb-divider{height:1px;background:var(--border);margin:8px 12px}
+.rover-online{display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(16,185,129,.06);
+  border:1px solid rgba(16,185,129,.2);border-radius:6px;margin:0 12px 8px;cursor:pointer;transition:background .2s}
+.rover-online:hover{background:rgba(16,185,129,.12)}
+.rover-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 1.5s ease-in-out infinite}
+.rover-name{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--green)}
+.rover-sub{font-size:10px;color:var(--text);margin-top:1px}
+
+/* ── CONTENT ── */
+.content{overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:14px;background:var(--bg)}
+.page-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.page-title{font-size:16px;font-weight:600;color:var(--text3);letter-spacing:.02em}
+.page-sub{font-size:11px;color:var(--text);margin-top:2px;font-family:var(--mono)}
+.header-actions{display:flex;align-items:center;gap:8px}
+.btn{font-family:var(--mono);font-size:10px;font-weight:500;padding:5px 12px;border-radius:4px;cursor:pointer;
+  border:1px solid var(--border2);background:var(--bg2);color:var(--text2);letter-spacing:.06em;text-transform:uppercase;transition:all .2s}
+.btn:hover{background:var(--bg3);border-color:var(--border3);color:var(--text3)}
+.btn.primary{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4);color:var(--blue)}
+.btn.primary:hover{background:rgba(59,130,246,.25)}
+
+/* ── STATUS BANNER (clickable) ── */
+.status-banner{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:6px;border:1px solid;
+  transition:all .4s;font-family:var(--mono);font-size:11px;letter-spacing:.04em;cursor:pointer;position:relative}
+.status-banner:hover{filter:brightness(1.15)}
+.status-banner .click-hint{position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  font-size:9px;color:inherit;opacity:.5;letter-spacing:.1em}
+.sb-icon-big{font-size:18px}.sb-main{flex:1}
+.sb-title{font-size:13px;font-weight:600}.sb-detail{font-size:10px;margin-top:2px;opacity:.75}
+.banner-safe{border-color:rgba(16,185,129,.25);background:rgba(16,185,129,.06);color:var(--green)}
+.banner-warn{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.07);color:var(--amber)}
+.banner-danger{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08);color:var(--red);animation:dangerpulse 1s ease-in-out infinite}
+@keyframes dangerpulse{0%,100%{background:rgba(239,68,68,.08)}50%{background:rgba(239,68,68,.16)}}
+
+/* ── KPI CARDS (clickable) ── */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+@media(max-width:1200px){.kpi-row{grid-template-columns:repeat(3,1fr)}}
+.kpi-card{background:var(--bg1);border:1px solid var(--border);border-radius:7px;padding:14px 13px 12px;
+  position:relative;overflow:hidden;cursor:pointer;transition:border-color .25s,box-shadow .25s,transform .15s}
+.kpi-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--blue);opacity:.3;transition:opacity .35s,background .35s}
+.kpi-card:hover{border-color:var(--border3);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,0.4)}
+.kpi-card.warn{border-color:rgba(245,158,11,.3);box-shadow:0 0 20px rgba(245,158,11,.05)}
+.kpi-card.warn::after{background:var(--amber);opacity:.7}
+.kpi-card.danger{border-color:rgba(239,68,68,.4);box-shadow:0 0 24px rgba(239,68,68,.08)}
+.kpi-card.danger::after{background:var(--red);opacity:1}
+.click-badge{position:absolute;top:8px;right:8px;font-family:var(--mono);font-size:7px;color:var(--text);
+  opacity:0;background:var(--bg3);border:1px solid var(--border);padding:2px 5px;border-radius:2px;transition:opacity .2s;letter-spacing:.06em}
+.kpi-card:hover .click-badge{opacity:.8}
+.kpi-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.kpi-label{font-size:10px;color:var(--text);text-transform:uppercase;letter-spacing:.08em;font-weight:500;line-height:1.3}
+.kpi-sensor{font-family:var(--mono);font-size:8px;color:var(--dim);margin-top:2px}
+.kpi-icon{font-size:16px;opacity:.7}
+.kpi-value{font-family:var(--mono);font-size:26px;font-weight:500;color:var(--text3);line-height:1;transition:color .35s}
+.kpi-card.warn .kpi-value{color:var(--amber)}
+.kpi-card.danger .kpi-value{color:var(--red)}
+.kpi-unit{font-family:var(--mono);font-size:10px;color:var(--text);margin-top:3px}
+.kpi-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.kpi-trend{font-family:var(--mono);font-size:10px;display:flex;align-items:center;gap:3px}
+.trend-up{color:var(--red)}.trend-dn{color:var(--green)}.trend-st{color:var(--text)}
+.kpi-badge{font-family:var(--mono);font-size:8px;font-weight:600;padding:2px 6px;border-radius:2px;letter-spacing:.08em}
+.badge-ok{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.badge-warn{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.badge-danger{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.kpi-sparkline{display:block}
+
+/* ── CHARTS ROW ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:900px){.charts-row{grid-template-columns:1fr}}
+.card{background:var(--bg1);border:1px solid var(--border);border-radius:7px;padding:14px 16px;position:relative;
+  cursor:pointer;transition:border-color .2s,transform .15s}
+.card:hover{border-color:var(--border3);transform:translateY(-1px)}
+.card:hover .click-badge{opacity:.8}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+.card-subtitle{font-family:var(--mono);font-size:9px;color:var(--text);margin-top:2px}
+.card-badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:2px;
+  background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.2);letter-spacing:.06em}
+.chart-legend-row{display:flex;gap:14px;margin-bottom:8px}
+.cl-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--text)}
+.cl-line{width:16px;height:2px;border-radius:1px}
+.chart-wrap{position:relative;width:100%;height:180px}
+.threshold-note{display:flex;gap:12px;margin-top:8px;font-family:var(--mono);font-size:9px}
+.th-item{display:flex;align-items:center;gap:5px}
+.th-dot{width:6px;height:6px;border-radius:50%}
+
+/* ── BOTTOM ROW ── */
+.bottom-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:1100px){.bottom-row{grid-template-columns:1fr 1fr}}
+.rover-card,.map-card,.alerts-card{background:var(--bg1);border:1px solid var(--border);border-radius:7px;padding:14px 16px;
+  cursor:pointer;transition:border-color .2s,transform .15s}
+.rover-card:hover,.map-card:hover,.alerts-card:hover{border-color:var(--border3);transform:translateY(-1px)}
+.rover-card:hover .click-badge,.map-card:hover .click-badge,.alerts-card:hover .click-badge{opacity:.8}
+.rover-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.rover-status-badge{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;color:var(--green);
+  background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);padding:3px 8px;border-radius:2px;letter-spacing:.06em}
+.rdot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:livepulse 1.5s infinite}
+.rover-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rm-item{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:9px 10px}
+.rm-lbl{font-size:9px;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.rm-val{font-family:var(--mono);font-size:13px;color:var(--text2)}
+.rm-val.ok{color:var(--green)}.rm-val.warn{color:var(--amber)}
+.rm-bar{height:3px;background:var(--bg);border-radius:2px;margin-top:6px;overflow:hidden}
+.rm-fill{height:100%;border-radius:2px;transition:width .7s ease}
+.fill-green{background:var(--green)}.fill-blue{background:var(--blue)}.fill-amber{background:var(--amber)}
+
+/* map */
+.mine-map{position:relative;width:100%;height:140px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:5px;overflow:hidden;margin-top:8px;font-family:var(--mono)}
+.map-grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(59,130,246,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.06) 1px,transparent 1px);
+  background-size:20px 20px}
+.map-shaft{position:absolute;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.25);border-radius:2px;
+  display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--blue);letter-spacing:.06em}
+.map-rover{position:absolute;width:10px;height:10px;background:var(--green);border-radius:50%;
+  box-shadow:0 0 12px var(--green);animation:roveranim 8s ease-in-out infinite;z-index:2}
+@keyframes roveranim{0%{top:60%;left:40%}25%{top:45%;left:55%}50%{top:55%;left:65%}75%{top:70%;left:50%}100%{top:60%;left:40%}}
+.map-rover::after{content:'';position:absolute;top:-6px;left:-6px;right:-6px;bottom:-6px;border-radius:50%;
+  border:1px solid rgba(16,185,129,.4);animation:roverring 1.5s ease-out infinite}
+@keyframes roverring{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.5);opacity:0}}
+.map-label{position:absolute;bottom:6px;right:8px;font-size:9px;color:var(--text);letter-spacing:.06em}
+.map-coord{position:absolute;top:6px;left:8px;font-size:9px;color:var(--cyan);letter-spacing:.04em}
+.map-danger-zone{position:absolute;top:30%;left:15%;width:22%;height:28%;background:rgba(239,68,68,.06);
+  border:1px dashed rgba(239,68,68,.3);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;color:rgba(239,68,68,.6)}
+
+/* alerts feed */
+.alert-list{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:160px;overflow-y:auto}
+.alert-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:4px;border:1px solid;font-size:11px;animation:slidein .3s ease}
+@keyframes slidein{from{transform:translateX(-8px);opacity:0}to{transform:translateX(0);opacity:1}}
+.ai-ok{border-color:rgba(16,185,129,.2);background:rgba(16,185,129,.05)}
+.ai-warn{border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.06)}
+.ai-danger{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.07)}
+.ai-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.ai-body{flex:1}
+.ai-msg{color:var(--text2);font-size:11px}
+.ai-msg.warn{color:var(--amber)}.ai-msg.danger{color:var(--red)}
+.ai-ts{font-family:var(--mono);font-size:9px;color:var(--text);margin-top:2px}
+
+/* log table */
+.log-card{background:var(--bg1);border:1px solid var(--border);border-radius:7px;padding:14px 16px;cursor:pointer;transition:border-color .2s}
+.log-card:hover{border-color:var(--border3)}
+.log-card:hover .click-badge{opacity:.8}
+.log-scroll{overflow-x:auto;margin-top:10px}
+.log-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;white-space:nowrap}
+.log-table thead th{font-size:9px;font-weight:500;color:var(--text);text-transform:uppercase;letter-spacing:.1em;
+  padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);background:var(--bg1);position:sticky;top:0}
+.log-table tbody td{padding:7px 10px;color:var(--text2);border-bottom:1px solid rgba(48,100,180,.06)}
+.log-table tbody tr:hover td{background:rgba(59,130,246,.04)}
+.log-table tbody tr:last-child td{border-bottom:none}
+.tg{padding:2px 7px;border-radius:2px;font-size:9px;font-weight:600;letter-spacing:.08em}
+.tg-ok{background:rgba(16,185,129,.1);color:var(--green)}
+.tg-warn{background:rgba(245,158,11,.1);color:var(--amber)}
+.tg-danger{background:rgba(239,68,68,.1);color:var(--red)}
+.num-ok{color:var(--text2)}.num-warn{color:var(--amber)}.num-danger{color:var(--red);font-weight:600}
+
+/* footer */
+.footer{border-top:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;background:var(--bg1)}
+.footer-left{font-family:var(--mono);font-size:9px;color:var(--text);letter-spacing:.06em}
+.footer-right{display:flex;gap:16px}
+.footer-stat{font-family:var(--mono);font-size:9px;color:var(--text)}
+.footer-stat span{color:var(--cyan)}
+
+/* ═══════════════════════════════════════════════════
+   DRAWER SYSTEM
+═══════════════════════════════════════════════════ */
+.drawer-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(3px);
+  z-index:500;opacity:0;pointer-events:none;transition:opacity .3s ease
+}
+.drawer-overlay.open{opacity:1;pointer-events:all}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:520px;max-width:95vw;
+  background:var(--bg1);border-left:1px solid var(--border2);
+  z-index:501;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden
+}
+.drawer.open{transform:translateX(0)}
+.drawer-header{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;
+  background:var(--bg2)
+}
+.drawer-title-block{flex:1}
+.drawer-title{font-size:15px;font-weight:600;color:var(--text3);letter-spacing:.02em}
+.drawer-sub{font-family:var(--mono);font-size:10px;color:var(--text);margin-top:3px;letter-spacing:.04em}
+.drawer-close{
+  width:28px;height:28px;border-radius:4px;border:1px solid var(--border2);
+  background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--text);font-size:14px;transition:all .2s;flex-shrink:0;margin-left:12px
+}
+.drawer-close:hover{background:var(--bg4);color:var(--text3);border-color:var(--border3)}
+.drawer-body{overflow-y:auto;flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+
+/* Drawer internal components */
+.d-section{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:14px}
+.d-section-title{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--text);text-transform:uppercase;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px}
+.d-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.d-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.d-row.three{grid-template-columns:1fr 1fr 1fr}
+.d-stat{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:10px 12px}
+.d-stat-lbl{font-family:var(--mono);font-size:9px;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.d-stat-val{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--text3)}
+.d-stat-val.ok{color:var(--green)}.d-stat-val.warn{color:var(--amber)}.d-stat-val.danger{color:var(--red)}
+.d-stat-sub{font-size:10px;color:var(--text);margin-top:3px}
+.d-bar-wrap{height:4px;background:var(--bg);border-radius:2px;margin-top:8px;overflow:hidden}
+.d-bar-fill{height:100%;border-radius:2px;transition:width .7s ease}
+
+.d-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+.d-table th{font-size:9px;color:var(--text);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);letter-spacing:.08em;font-weight:500;text-transform:uppercase}
+.d-table td{padding:6px 8px;color:var(--text2);border-bottom:1px solid rgba(48,100,180,.07)}
+.d-table tr:last-child td{border-bottom:none}
+.d-table tr:hover td{background:rgba(59,130,246,.04)}
+
+.d-info-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(48,100,180,.08);font-size:12px}
+.d-info-row:last-child{border-bottom:none}
+.d-info-key{color:var(--text)}
+.d-info-val{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.d-info-val.ok{color:var(--green)}.d-info-val.warn{color:var(--amber)}.d-info-val.danger{color:var(--red)}
+
+.d-badge{font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 8px;border-radius:2px;letter-spacing:.08em}
+.d-chart-wrap{position:relative;width:100%;height:160px}
+.d-gauge-wrap{position:relative;width:100%;height:120px;display:flex;align-items:center;justify-content:center}
+
+.threshold-row{display:flex;flex-direction:column;gap:6px}
+.th-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:4px;background:var(--bg3);border:1px solid var(--border)}
+.th-row .th-dot2{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.th-row-info{flex:1}
+.th-row-label{font-size:11px;color:var(--text2)}
+.th-row-val{font-family:var(--mono);font-size:10px;color:var(--text);margin-top:2px}
+
+.history-chart-wrap{position:relative;width:100%;height:140px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-left">
+    <div class="tb-logo">
+      <div class="tb-logo-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" stroke="white" stroke-width="1.2" fill="none"/>
+          <circle cx="8" cy="8" r="2.5" fill="white" opacity=".9"/>
+        </svg>
+      </div>
+      <div><div class="tb-logo-text">Smart Mining System</div><div class="tb-logo-sub">v2.4.1</div></div>
+    </div>
+    <div class="tb-breadcrumb">
+      <span>Operations</span><span class="tb-sep">/</span><span>Shaft B</span>
+      <span class="tb-sep">/</span><span style="color:var(--text2)">Safety Dashboard</span>
+    </div>
+  </div>
+  <div class="tb-right">
+    <div><div class="tb-time" id="clock">--:--:--</div><div class="tb-date" id="datestr">---</div></div>
+    <div style="display:flex;align-items:center;gap:5px">
+      <div class="connection-dot"></div><div class="conn-label">LIVE</div>
+    </div>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker-bar">
+  <div class="ticker-label live" id="tickerLabel">LIVE</div>
+  <div class="ticker-scroll">
+    <span class="ticker-item">CH₄: <b id="tk-m" style="color:var(--text2)">--</b> ppm <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">CO: <b id="tk-co" style="color:var(--text2)">--</b> ppm <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">AQI: <b id="tk-aqi" style="color:var(--text2)">--</b> <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Temp: <b id="tk-t" style="color:var(--text2)">--</b>°C <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Humidity: <b id="tk-h" style="color:var(--text2)">--</b>% <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Rover: <b style="color:var(--green)">ACTIVE</b> · Battery: <b id="tk-b" style="color:var(--text2)">--</b>% <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Sector 3 · Shaft B · 24.8°N 73.7°E <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">CH₄: <b id="tk-m2" style="color:var(--text2)">--</b> ppm <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">CO: <b id="tk-co2" style="color:var(--text2)">--</b> ppm <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">AQI: <b id="tk-aqi2" style="color:var(--text2)">--</b> <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Temp: <b id="tk-t2" style="color:var(--text2)">--</b>°C <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Humidity: <b id="tk-h2" style="color:var(--text2)">--</b>% <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Rover: <b style="color:var(--green)">ACTIVE</b> · Battery: <b id="tk-b2" style="color:var(--text2)">--</b>% <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Sector 3 · Shaft B · 24.8°N 73.7°E <span class="ticker-sep">·</span></span>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">Navigation</div>
+      <div class="sb-item active">
+        <svg class="sb-icon" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+        Overview<span class="sb-badge ok">LIVE</span>
+      </div>
+      <div class="sb-item" onclick="openDrawer('analytics')">
+        <svg class="sb-icon" viewBox="0 0 14 14" fill="none"><polyline points="1,10 4,5 7,8 10,3 13,6" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+        Analytics
+      </div>
+      <div class="sb-item" onclick="openDrawer('alerts')">
+        <svg class="sb-icon" viewBox="0 0 14 14" fill="none"><path d="M7 1L9.5 5H4.5L7 1Z" stroke="currentColor" stroke-width="1.2" fill="none"/><rect x="1.5" y="7" width="4" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><circle cx="10.5" cy="10" r="2.5" stroke="currentColor" stroke-width="1.2"/></svg>
+        Alerts<span class="sb-badge warn" id="sb-alertcount">0</span>
+      </div>
+      <div class="sb-item" onclick="openDrawer('settings')">
+        <svg class="sb-icon" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2M2.93 2.93l1.41 1.41M9.66 9.66l1.41 1.41M2.93 11.07l1.41-1.41M9.66 4.34l1.41-1.41" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+        Settings
+      </div>
+    </div>
+    <div class="sb-divider"></div>
+    <div class="rover-online" onclick="openDrawer('rover')">
+      <div class="rover-dot"></div>
+      <div><div class="rover-name">ROVER-MK2</div><div class="rover-sub">Click for details →</div></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Rover Telemetry</div>
+      <div class="sb-stat-card">
+        <div class="sb-stat-label">Battery</div>
+        <div class="sb-stat-val" id="sb-batt">78%</div>
+        <div class="mini-bar"><div class="mini-bar-fill fill-green" id="sb-batt-bar" style="width:78%"></div></div>
+      </div>
+      <div class="sb-stat-card">
+        <div class="sb-stat-label">WiFi Signal</div>
+        <div class="sb-stat-val" id="sb-signal">72%</div>
+        <div class="mini-bar"><div class="mini-bar-fill fill-blue" id="sb-signal-bar" style="width:72%"></div></div>
+      </div>
+      <div class="sb-stat-card">
+        <div class="sb-stat-label">Uptime</div>
+        <div class="sb-stat-val" id="sb-uptime">00:00:00</div>
+        <div class="sb-stat-sub">Since session start</div>
+      </div>
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-section">
+      <div class="sb-label">Sensors Online</div>
+      <div class="sb-item" onclick="openDrawer('methane')"><svg class="sb-icon" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" fill="currentColor"/></svg>MQ-4 (Methane)<span class="sb-badge ok">ON</span></div>
+      <div class="sb-item" onclick="openDrawer('co')"><svg class="sb-icon" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" fill="currentColor"/></svg>MQ-7 (CO)<span class="sb-badge ok">ON</span></div>
+      <div class="sb-item" onclick="openDrawer('aqi')"><svg class="sb-icon" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" fill="currentColor"/></svg>MQ-135 (AQI)<span class="sb-badge ok">ON</span></div>
+      <div class="sb-item" onclick="openDrawer('environment')"><svg class="sb-icon" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" fill="currentColor"/></svg>DHT22 (Env)<span class="sb-badge ok">ON</span></div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="page-header">
+      <div><div class="page-title">Safety Monitoring Dashboard</div>
+      <div class="page-sub">Click any card or panel for detailed information</div></div>
+      <div class="header-actions">
+        <button class="btn" onclick="exportCSV()">Export CSV</button>
+        <button class="btn primary" onclick="openDrawer('settings')">Thresholds</button>
+      </div>
+    </div>
+
+    <!-- STATUS BANNER -->
+    <div class="status-banner banner-safe" id="statusBanner" onclick="openDrawer('status')">
+      <div class="sb-icon-big" id="bannerIcon">✅</div>
+      <div class="sb-main">
+        <div class="sb-title" id="bannerTitle">ALL SYSTEMS NORMAL</div>
+        <div class="sb-detail" id="bannerDetail">All sensor readings within safe operational limits. Rover operating normally.</div>
+      </div>
+      <div class="click-hint">CLICK FOR DETAILS ›</div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="kpi-row">
+      <div class="kpi-card" id="kpi-methane" onclick="openDrawer('methane')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="kpi-header"><div><div class="kpi-label">Methane</div><div class="kpi-sensor">MQ-4 SENSOR</div></div><div class="kpi-icon">🔥</div></div>
+        <div class="kpi-value" id="v-methane">45</div><div class="kpi-unit">ppm</div>
+        <canvas class="kpi-sparkline" id="sp-methane" height="28" role="img" aria-label="methane trend"></canvas>
+        <div class="kpi-footer"><div class="kpi-trend" id="tr-methane"><span class="trend-st">— STABLE</span></div><div class="kpi-badge badge-ok" id="bd-methane">SAFE</div></div>
+      </div>
+      <div class="kpi-card" id="kpi-co" onclick="openDrawer('co')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="kpi-header"><div><div class="kpi-label">Carbon Monoxide</div><div class="kpi-sensor">MQ-7 SENSOR</div></div><div class="kpi-icon">💨</div></div>
+        <div class="kpi-value" id="v-co">12</div><div class="kpi-unit">ppm</div>
+        <canvas class="kpi-sparkline" id="sp-co" height="28" role="img" aria-label="CO trend"></canvas>
+        <div class="kpi-footer"><div class="kpi-trend" id="tr-co"><span class="trend-st">— STABLE</span></div><div class="kpi-badge badge-ok" id="bd-co">SAFE</div></div>
+      </div>
+      <div class="kpi-card" id="kpi-aqi" onclick="openDrawer('aqi')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="kpi-header"><div><div class="kpi-label">Air Quality</div><div class="kpi-sensor">MQ-135 SENSOR</div></div><div class="kpi-icon">🌫️</div></div>
+        <div class="kpi-value" id="v-aqi">120</div><div class="kpi-unit">AQI</div>
+        <canvas class="kpi-sparkline" id="sp-aqi" height="28" role="img" aria-label="AQI trend"></canvas>
+        <div class="kpi-footer"><div class="kpi-trend" id="tr-aqi"><span class="trend-st">— STABLE</span></div><div class="kpi-badge badge-ok" id="bd-aqi">SAFE</div></div>
+      </div>
+      <div class="kpi-card" id="kpi-temp" onclick="openDrawer('environment')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="kpi-header"><div><div class="kpi-label">Temperature</div><div class="kpi-sensor">DHT22 SENSOR</div></div><div class="kpi-icon">🌡️</div></div>
+        <div class="kpi-value" id="v-temp">32</div><div class="kpi-unit">°C</div>
+        <canvas class="kpi-sparkline" id="sp-temp" height="28" role="img" aria-label="temp trend"></canvas>
+        <div class="kpi-footer"><div class="kpi-trend" id="tr-temp"><span class="trend-st">— STABLE</span></div><div class="kpi-badge badge-ok" id="bd-temp">OK</div></div>
+      </div>
+      <div class="kpi-card" onclick="openDrawer('environment')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="kpi-header"><div><div class="kpi-label">Humidity</div><div class="kpi-sensor">DHT22 SENSOR</div></div><div class="kpi-icon">💧</div></div>
+        <div class="kpi-value" id="v-hum">60</div><div class="kpi-unit">%</div>
+        <canvas class="kpi-sparkline" id="sp-hum" height="28" role="img" aria-label="humidity trend"></canvas>
+        <div class="kpi-footer"><div class="kpi-trend"><span class="trend-st">— STABLE</span></div><div class="kpi-badge badge-ok">OK</div></div>
+      </div>
+      <div class="kpi-card" id="kpi-metal" onclick="openDrawer('metal')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="kpi-header"><div><div class="kpi-label">Metal Detection</div><div class="kpi-sensor">INDUCTIVE PROBE</div></div><div class="kpi-icon">🧲</div></div>
+        <div class="kpi-value" id="v-metal" style="font-size:14px;margin-top:6px;color:var(--green)">CLEAR</div><div class="kpi-unit">&nbsp;</div>
+        <div style="height:28px;display:flex;align-items:center;margin-top:4px"><div style="font-family:var(--mono);font-size:10px;color:var(--text)" id="metal-sub">No objects detected</div></div>
+        <div class="kpi-footer"><div class="kpi-trend"><span class="trend-st">— NOMINAL</span></div><div class="kpi-badge badge-ok" id="bd-metal">CLEAR</div></div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts-row">
+      <div class="card" onclick="openDrawer('gasChart')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="card-header">
+          <div><div class="card-title">Gas Concentration</div><div class="card-subtitle">Methane &amp; CO · rolling 25-sample window</div></div>
+          <div class="card-badge">LIVE · 2.5s</div>
+        </div>
+        <div class="chart-legend-row">
+          <div class="cl-item"><div class="cl-line" style="background:#f97316;height:2px"></div> Methane (ppm)</div>
+          <div class="cl-item"><div class="cl-line" style="background:#60a5fa;height:2px;opacity:.8"></div> CO (ppm)</div>
+        </div>
+        <div class="chart-wrap"><canvas id="gasChart" role="img" aria-label="gas chart">Gas readings.</canvas></div>
+        <div class="threshold-note">
+          <div class="th-item"><div class="th-dot" style="background:#f59e0b"></div><span style="color:var(--text)">CH₄ warn &gt;50 / danger &gt;100</span></div>
+          <div class="th-item"><div class="th-dot" style="background:#ef4444"></div><span style="color:var(--text)">CO warn &gt;20 / danger &gt;50</span></div>
+        </div>
+      </div>
+      <div class="card" onclick="openDrawer('envChart')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="card-header">
+          <div><div class="card-title">Environmental Conditions</div><div class="card-subtitle">Temperature &amp; Humidity · rolling 25-sample window</div></div>
+          <div class="card-badge">LIVE · 2.5s</div>
+        </div>
+        <div class="chart-legend-row">
+          <div class="cl-item"><div class="cl-line" style="background:#10b981;height:2px"></div> Temp (°C)</div>
+          <div class="cl-item"><div class="cl-line" style="background:#818cf8;height:2px"></div> Humidity (%)</div>
+        </div>
+        <div class="chart-wrap"><canvas id="envChart" role="img" aria-label="env chart">Env readings.</canvas></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM ROW -->
+    <div class="bottom-row">
+      <div class="rover-card" onclick="openDrawer('rover')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="rover-header">
+          <div><div class="card-title">Rover Telemetry</div><div class="card-subtitle">ROVER-MK2 · ESP32 · LoRa</div></div>
+          <div class="rover-status-badge"><div class="rdot"></div> ACTIVE</div>
+        </div>
+        <div class="rover-metrics">
+          <div class="rm-item"><div class="rm-lbl">Battery</div><div class="rm-val ok" id="rm-batt">78%</div><div class="rm-bar"><div class="rm-fill fill-green" id="rm-batt-bar" style="width:78%"></div></div></div>
+          <div class="rm-item"><div class="rm-lbl">WiFi RSSI</div><div class="rm-val" id="rm-rssi">-62 dBm</div></div>
+          <div class="rm-item"><div class="rm-lbl">LoRa SNR</div><div class="rm-val">+8.4 dB</div></div>
+          <div class="rm-item"><div class="rm-lbl">Speed</div><div class="rm-val" id="rm-speed">0.3 m/s</div></div>
+          <div class="rm-item" style="grid-column:1/-1"><div class="rm-lbl">Signal Quality</div><div class="rm-val ok">72%</div><div class="rm-bar"><div class="rm-fill fill-blue" style="width:72%"></div></div></div>
+        </div>
+      </div>
+      <div class="map-card" onclick="openDrawer('map')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="card-header">
+          <div><div class="card-title">Mine Map</div><div class="card-subtitle">Sector 3 · Shaft B · Live Tracking</div></div>
+        </div>
+        <div class="mine-map">
+          <div class="map-grid"></div>
+          <div class="map-danger-zone">⚠ ZONE-A</div>
+          <div class="map-shaft" style="top:20%;left:5%;width:8%;height:60%">S-A</div>
+          <div class="map-shaft" style="top:20%;left:80%;width:8%;height:60%">S-B</div>
+          <div class="map-shaft" style="top:10%;left:5%;width:75%;height:12%">MAIN CORRIDOR</div>
+          <div class="map-shaft" style="top:78%;left:5%;width:75%;height:12%">EXIT TUNNEL</div>
+          <div class="map-rover"></div>
+          <div class="map-coord" id="map-coord">24.8012°N 73.7045°E</div>
+          <div class="map-label">ROVER-MK2</div>
+        </div>
+      </div>
+      <div class="alerts-card" onclick="openDrawer('alerts')">
+        <div class="click-badge">DETAILS ›</div>
+        <div class="card-header"><div class="card-title">Alert Feed</div><div class="card-badge" id="alerts-count">0 active</div></div>
+        <div class="alert-list" id="alertList">
+          <div class="alert-item ai-ok"><div class="ai-icon">✅</div><div class="ai-body"><div class="ai-msg">System initialized — all sensors online</div><div class="ai-ts" id="init-ts">--:--:--</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG TABLE -->
+    <div class="log-card" onclick="openDrawer('log')">
+      <div class="click-badge">EXPAND ›</div>
+      <div class="card-header">
+        <div><div class="card-title">Data Log</div><div class="card-subtitle">Last 12 readings · Auto-refresh 2.5s · Click to expand full log</div></div>
+        <button class="btn" onclick="event.stopPropagation();exportCSV()">Export CSV</button>
+      </div>
+      <div class="log-scroll">
+        <table class="log-table">
+          <thead><tr><th>#</th><th>Timestamp</th><th>CH₄</th><th>CO</th><th>AQI</th><th>Temp</th><th>Hum</th><th>Metal</th><th>Status</th></tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-left">SmartMine OS v2.4.1 · ESP32 + DHT22 + MQ-4 + MQ-7 + MQ-135 · LoRa + WiFi · Simulation Mode</div>
+  <div class="footer-right">
+    <div class="footer-stat">Readings: <span id="ft-dp">0</span></div>
+    <div class="footer-stat">Uptime: <span id="ft-uptime">00:00:00</span></div>
+    <div class="footer-stat">Status: <span id="ft-status" style="color:var(--green)">NOMINAL</span></div>
+  </div>
+</div>
+
+<!-- ═══ DRAWER OVERLAY + DRAWER ═══ -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title-block">
+      <div class="drawer-title" id="drawerTitle">Details</div>
+      <div class="drawer-sub" id="drawerSub">—</div>
+    </div>
+    <div class="drawer-close" onclick="closeDrawer()">✕</div>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const rnd = (a,b) => a+Math.random()*(b-a);
+const rndInt = (a,b) => Math.round(rnd(a,b));
+const state = {
+  methane:42, co:11, aqi:118, temp:31.4, hum:58,
+  battery:78, signal:72, dp:0, alertCount:0, seconds:0,
+  methaneVel:0, coVel:0, aqiVel:0, tempVel:0, humVel:0,
+  prevMethane:42, prevCo:11, metal:false,
+  lastStatus:'SAFE', eventLog:[]
+};
+const sparkData = {methane:[],co:[],aqi:[],temp:[],hum:[]};
+const MAX_SPARK=30;
+const chartLabels=[],gasM=[],gasCO=[],envT=[],envH=[];
+const MAX_PTS=25;
+const logRows=[];
+let rowNum=0;
+const alertMessages=[];
+let drawerChart1=null, drawerChart2=null;
+
+// ── SENSOR SIMULATION ──────────────────────────────────────────
+function stepSensor(val,vel,min,max,noise=1.8){
+  vel += (Math.random()-.5)*noise;
+  vel += (((min+max)/2)-val)*0.035;
+  vel *= 0.87;
+  return {val:Math.max(min,Math.min(max,val+vel)),vel};
+}
+function stepAll(){
+  if(Math.random()<0.04) state.methaneVel+=rnd(8,22)*(Math.random()<.5?1:-1);
+  if(Math.random()<0.03) state.coVel+=rnd(5,16)*(Math.random()<.5?1:-1);
+  let r;
+  r=stepSensor(state.methane,state.methaneVel,18,118,1.8); state.methane=r.val; state.methaneVel=r.vel;
+  r=stepSensor(state.co,state.coVel,5,58,.9); state.co=r.val; state.coVel=r.vel;
+  r=stepSensor(state.aqi,state.aqiVel,80,185,2.5); state.aqi=r.val; state.aqiVel=r.vel;
+  r=stepSensor(state.temp,state.tempVel,27,40,.08); state.temp=r.val; state.tempVel=r.vel;
+  r=stepSensor(state.hum,state.humVel,45,85,.5); state.hum=r.val; state.humVel=r.vel;
+  if(state.seconds%60===0&&state.battery>20) state.battery-=0.5;
+}
+
+// ── CLOCK ──────────────────────────────────────────────────────
+function tickClock(){
+  const now=new Date();
+  const t=pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  $('clock').textContent=t;
+  $('datestr').textContent=now.toLocaleDateString('en-IN',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  state.seconds++;
+  const h=Math.floor(state.seconds/3600),m=Math.floor((state.seconds%3600)/60),s=state.seconds%60;
+  const ut=pad(h)+':'+pad(m)+':'+pad(s);
+  ['sb-uptime','ft-uptime'].forEach(id=>$(id).textContent=ut);
+  $('init-ts').textContent=new Date(Date.now()-state.seconds*1000).toLocaleTimeString();
+}
+setInterval(tickClock,1000); tickClock();
+
+// ── CHARTS ────────────────────────────────────────────────────
+const chartCfg={responsive:true,maintainAspectRatio:false,
+  interaction:{mode:'index',intersect:false},
+  plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d1117',borderColor:'rgba(48,100,180,0.35)',borderWidth:1,titleColor:'#64748b',bodyColor:'#cbd5e1',padding:8,titleFont:{family:"'IBM Plex Mono'",size:10},bodyFont:{family:"'IBM Plex Mono'",size:11}}},
+  scales:{x:{ticks:{color:'#374151',maxTicksLimit:6,font:{size:9,family:"'IBM Plex Mono'"}},grid:{color:'rgba(48,100,180,0.06)'}},y:{ticks:{color:'#374151',font:{size:9,family:"'IBM Plex Mono'"}},grid:{color:'rgba(48,100,180,0.06)'},min:0}}};
+
+const gasChart=new Chart($('gasChart').getContext('2d'),{type:'line',data:{labels:chartLabels,datasets:[
+  {label:'CH₄ ppm',data:gasM,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.07)',tension:.4,pointRadius:0,borderWidth:2,fill:true},
+  {label:'CO ppm',data:gasCO,borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.05)',tension:.4,pointRadius:0,borderWidth:1.5,fill:true,borderDash:[5,4]}
+]},options:chartCfg});
+const envChart=new Chart($('envChart').getContext('2d'),{type:'line',data:{labels:chartLabels,datasets:[
+  {label:'Temp °C',data:envT,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.08)',tension:.4,pointRadius:0,borderWidth:2,fill:true},
+  {label:'Humidity %',data:envH,borderColor:'#818cf8',backgroundColor:'rgba(129,140,248,0.05)',tension:.4,pointRadius:0,borderWidth:1.5,fill:true}
+]},options:chartCfg});
+
+// ── SPARKLINES ────────────────────────────────────────────────
+function drawSparkline(id,data,color){
+  const c=$(id); if(!c||data.length<2) return;
+  const W=c.offsetWidth||160,H=28; c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const min=Math.min(...data)*.95, max=Math.max(...data)*1.05+.01;
+  const xS=W/(data.length-1);
+  const toY=v=>H-((v-min)/(max-min))*(H-4)-2;
+  ctx.beginPath(); data.forEach((v,i)=>i===0?ctx.moveTo(0,toY(v)):ctx.lineTo(i*xS,toY(v)));
+  ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.lineTo((data.length-1)*xS,H); ctx.lineTo(0,H); ctx.closePath();
+  ctx.fillStyle=color.replace('rgb(','rgba(').replace(')',',0.1)'); ctx.fill();
+}
+
+// ── STATUS ────────────────────────────────────────────────────
+function getStatus(m,co,aqi){
+  if(m>100||co>50) return'DANGER';
+  if(m>50||co>20||aqi>150) return'WARNING';
+  return'SAFE';
+}
+function setKpi(cardId,badgeId,trendId,newVal,prevVal,level){
+  const c=$(cardId),b=$(badgeId),t=trendId?$(trendId):null;
+  c.className='kpi-card';
+  if(level==='DANGER'){c.classList.add('danger');b.className='kpi-badge badge-danger';b.textContent='DANGER';}
+  else if(level==='WARNING'){c.classList.add('warn');b.className='kpi-badge badge-warn';b.textContent='WARN';}
+  else{b.className='kpi-badge badge-ok';b.textContent='SAFE';}
+  if(t){const d=newVal-prevVal,a=Math.abs(d)<.5?'—':d>0?'▲':'▼',cl=Math.abs(d)<.5?'trend-st':d>0?'trend-up':'trend-dn';
+  t.innerHTML=`<span class="${cl}">${a} ${Math.abs(d).toFixed(1)}</span>`;}
+}
+function pushAlert(msg,level,ts){
+  alertMessages.unshift({msg,level,ts});
+  if(alertMessages.length>12) alertMessages.pop();
+  state.eventLog.unshift({msg,level,ts});
+  const cls=level==='DANGER'?'ai-danger':level==='WARNING'?'ai-warn':'ai-ok';
+  const icon=level==='DANGER'?'🚨':level==='WARNING'?'⚠️':'✅';
+  const mc=level==='DANGER'?'danger':level==='WARNING'?'warn':'';
+  $('alertList').innerHTML=alertMessages.map(a=>`
+    <div class="alert-item ${a.level==='DANGER'?'ai-danger':a.level==='WARNING'?'ai-warn':'ai-ok'}">
+      <div class="ai-icon">${a.level==='DANGER'?'🚨':a.level==='WARNING'?'⚠️':'✅'}</div>
+      <div class="ai-body"><div class="ai-msg ${a.level==='DANGER'?'danger':a.level==='WARNING'?'warn':''}">${a.msg}</div><div class="ai-ts">${a.ts}</div></div>
+    </div>`).join('');
+  state.alertCount=alertMessages.filter(a=>a.level!=='SAFE').length;
+  $('alerts-count').textContent=state.alertCount+' active';
+  $('sb-alertcount').textContent=state.alertCount;
+  $('sb-alertcount').className='sb-badge '+(state.alertCount>0?'danger':'ok');
+}
+
+// ── MAIN UPDATE ───────────────────────────────────────────────
+function update(){
+  stepAll();
+  const m=Math.round(state.methane), co=Math.round(state.co), aqi=Math.round(state.aqi);
+  const temp=+state.temp.toFixed(1), hum=Math.round(state.hum);
+  state.metal=Math.random()<0.06;
+  const status=getStatus(m,co,aqi);
+  const now=new Date();
+  const ts=pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+
+  $('v-methane').textContent=m; $('v-co').textContent=co; $('v-aqi').textContent=aqi;
+  $('v-temp').textContent=temp; $('v-hum').textContent=hum;
+
+  const mk=$('kpi-metal'),vk=$('v-metal'),bk=$('bd-metal'),ms=$('metal-sub');
+  if(state.metal){mk.className='kpi-card warn';vk.style.color='var(--amber)';vk.textContent='DETECTED';bk.className='kpi-badge badge-warn';bk.textContent='ALERT';ms.textContent='Metal object in proximity!';}
+  else{mk.className='kpi-card';vk.style.color='var(--green)';vk.textContent='CLEAR';bk.className='kpi-badge badge-ok';bk.textContent='CLEAR';ms.textContent='No objects detected';}
+
+  setKpi('kpi-methane','bd-methane','tr-methane',m,state.prevMethane,m>100?'DANGER':m>50?'WARNING':'SAFE');
+  setKpi('kpi-co','bd-co','tr-co',co,state.prevCo,co>50?'DANGER':co>20?'WARNING':'SAFE');
+  setKpi('kpi-aqi','bd-aqi','tr-aqi',aqi,aqi,aqi>150?'WARNING':'SAFE');
+  state.prevMethane=m; state.prevCo=co;
+
+  const banner=$('statusBanner'); banner.className='status-banner';
+  if(status==='DANGER'){banner.classList.add('banner-danger');$('bannerIcon').textContent='🚨';$('bannerTitle').textContent='DANGER — CRITICAL CONDITIONS DETECTED';$('bannerDetail').textContent=m>100?`Methane at ${m} ppm — EVACUATE immediately!`:`CO at ${co} ppm — exceeds safe limit!`;}
+  else if(status==='WARNING'){banner.classList.add('banner-warn');$('bannerIcon').textContent='⚠️';$('bannerTitle').textContent='WARNING — ELEVATED READINGS';$('bannerDetail').textContent=m>50?`Methane at ${m} ppm — approaching critical threshold.`:`Elevated sensor readings detected.`;}
+  else{banner.classList.add('banner-safe');$('bannerIcon').textContent='✅';$('bannerTitle').textContent='ALL SYSTEMS NORMAL';$('bannerDetail').textContent='All sensor readings within safe operational limits.';}
+
+  if(status!==state.lastStatus){
+    if(status==='DANGER') pushAlert(`DANGER: ${m>100?`CH₄ at ${m} ppm`:`CO at ${co} ppm`} — critical threshold exceeded`,'DANGER',ts);
+    else if(status==='WARNING') pushAlert(`WARNING: ${m>50?`CH₄ at ${m} ppm`:`CO at ${co} ppm`} — elevated levels`,'WARNING',ts);
+    else pushAlert('All sensors returned to safe levels','SAFE',ts);
+    state.lastStatus=status;
+  }
+
+  const tl=$('tickerLabel');
+  if(status==='DANGER'){tl.className='ticker-label alert';tl.textContent='DANGER';tl.style.color='';tl.style.background='';tl.style.borderColor='';}
+  else if(status==='WARNING'){tl.className='ticker-label alert';tl.textContent='WARNING';tl.style.color='var(--amber)';tl.style.background='rgba(245,158,11,.1)';tl.style.borderColor='rgba(245,158,11,.3)';}
+  else{tl.className='ticker-label live';tl.textContent='LIVE';tl.style.color='';tl.style.background='';tl.style.borderColor='';}
+
+  ['tk-m','tk-m2'].forEach(id=>$(id).textContent=m);
+  ['tk-co','tk-co2'].forEach(id=>$(id).textContent=co);
+  ['tk-aqi','tk-aqi2'].forEach(id=>$(id).textContent=aqi);
+  ['tk-t','tk-t2'].forEach(id=>$(id).textContent=temp);
+  ['tk-h','tk-h2'].forEach(id=>$(id).textContent=hum);
+  ['tk-b','tk-b2'].forEach(id=>$(id).textContent=Math.round(state.battery));
+
+  const bPct=Math.round(state.battery);
+  ['sb-batt','rm-batt'].forEach(id=>$(id).textContent=bPct+'%');
+  ['sb-batt-bar','rm-batt-bar'].forEach(id=>$(id).style.width=bPct+'%');
+  $('sb-signal').textContent=Math.round(state.signal)+'%';
+  $('sb-signal-bar').style.width=Math.round(state.signal)+'%';
+  $('rm-rssi').textContent=(-50-Math.round((100-state.signal)*.8))+' dBm';
+  $('rm-speed').textContent=+(0.1+Math.random()*.5).toFixed(1)+' m/s';
+
+  const lat=(24.8012+(Math.random()-.5)*.001).toFixed(4);
+  const lng=(73.7045+(Math.random()-.5)*.001).toFixed(4);
+  $('map-coord').textContent=lat+'°N '+lng+'°E';
+
+  ['methane','co','aqi','temp','hum'].forEach(key=>{
+    const vals={methane:m,co,aqi,temp,hum};
+    const colors={methane:'rgb(249,115,22)',co:'rgb(96,165,250)',aqi:'rgb(34,211,238)',temp:'rgb(16,185,129)',hum:'rgb(129,140,248)'};
+    sparkData[key].push(vals[key]);
+    if(sparkData[key].length>MAX_SPARK) sparkData[key].shift();
+    drawSparkline('sp-'+key,sparkData[key],colors[key]);
+  });
+
+  chartLabels.push(ts); gasM.push(m); gasCO.push(co); envT.push(temp); envH.push(hum);
+  if(chartLabels.length>MAX_PTS){chartLabels.shift();gasM.shift();gasCO.shift();envT.shift();envH.shift();}
+  gasChart.update('none'); envChart.update('none');
+
+  state.dp++; rowNum++;
+  const tagCls=status==='DANGER'?'tg-danger':status==='WARNING'?'tg-warn':'tg-ok';
+  const mCls=m>100?'num-danger':m>50?'num-warn':'num-ok';
+  const cCls=co>50?'num-danger':co>20?'num-warn':'num-ok';
+  logRows.unshift({
+    html:`<tr><td style="color:var(--dim)">${rowNum}</td><td>${ts}</td><td class="${mCls}">${m}</td><td class="${cCls}">${co}</td><td class="${aqi>150?'num-warn':'num-ok'}">${aqi}</td><td>${temp}</td><td>${hum}</td><td style="color:${state.metal?'var(--amber)':'var(--dim)'}">${state.metal?'YES':'—'}</td><td><span class="tg ${tagCls}">${status}</span></td></tr>`,
+    csv:`${rowNum},${ts},${m},${co},${aqi},${temp},${hum},${state.metal?1:0},${status}`,
+    raw:{rowNum,ts,m,co,aqi,temp,hum,metal:state.metal,status}
+  });
+  if(logRows.length>12) logRows.pop();
+  $('logBody').innerHTML=logRows.map(r=>r.html).join('');
+
+  $('ft-dp').textContent=state.dp;
+  $('ft-status').textContent=status;
+  $('ft-status').style.color=status==='DANGER'?'var(--red)':status==='WARNING'?'var(--amber)':'var(--green)';
+
+  // Update open drawer live if it's a sensor drawer
+  updateOpenDrawer();
+}
+
+// ── DRAWER SYSTEM ─────────────────────────────────────────────
+let currentDrawer = null;
+function openDrawer(type){
+  currentDrawer = type;
+  $('drawerOverlay').classList.add('open');
+  $('drawer').classList.add('open');
+  renderDrawer(type);
+}
+function closeDrawer(){
+  $('drawerOverlay').classList.remove('open');
+  $('drawer').classList.remove('open');
+  currentDrawer = null;
+  if(drawerChart1){drawerChart1.destroy();drawerChart1=null;}
+  if(drawerChart2){drawerChart2.destroy();drawerChart2=null;}
+}
+function updateOpenDrawer(){
+  if(!currentDrawer) return;
+  const liveDrawers=['methane','co','aqi','environment','metal','rover','status'];
+  if(liveDrawers.includes(currentDrawer)) renderDrawer(currentDrawer,true);
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
+
+function statusBadge(s){
+  const cls=s==='DANGER'?'badge-danger':s==='WARNING'?'badge-warn':'badge-ok';
+  return `<span class="d-badge ${cls}">${s}</span>`;
+}
+function makeThreshRow(color,label,val,detail){
+  return `<div class="th-row"><div class="th-dot2" style="background:${color}"></div><div class="th-row-info"><div class="th-row-label">${label}</div><div class="th-row-val">${detail}</div></div><div style="font-family:var(--mono);font-size:13px;font-weight:500;color:${color}">${val}</div></div>`;
+}
+function infoRow(key,val,cls=''){
+  return `<div class="d-info-row"><span class="d-info-key">${key}</span><span class="d-info-val ${cls}">${val}</span></div>`;
+}
+
+function renderDrawer(type, liveUpdate=false){
+  const m=Math.round(state.methane), co=Math.round(state.co), aqi=Math.round(state.aqi);
+  const temp=+state.temp.toFixed(1), hum=Math.round(state.hum);
+  const status=getStatus(m,co,aqi);
+  const ts=new Date().toLocaleTimeString();
+
+  const drawerDefs = {
+
+    methane:{
+      title:'🔥 Methane (CH₄) — Detailed Analysis',
+      sub:'MQ-4 Gas Sensor · Real-time monitoring',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Current Reading</div>
+          <div class="d-row three">
+            <div class="d-stat"><div class="d-stat-lbl">Live Value</div><div class="d-stat-val ${m>100?'danger':m>50?'warn':'ok'}">${m}</div><div class="d-stat-sub">ppm</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Status</div><div class="d-stat-val ${m>100?'danger':m>50?'warn':'ok'}">${m>100?'DANGER':m>50?'WARNING':'SAFE'}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">% of Danger</div><div class="d-stat-val ${m>100?'danger':m>50?'warn':'ok'}">${Math.round(m/100*100)}%</div></div>
+          </div>
+          <div class="d-stat-lbl" style="margin-bottom:4px">Level vs threshold (100 ppm danger)</div>
+          <div class="d-bar-wrap" style="height:6px"><div class="d-bar-fill" style="width:${Math.min(100,m)}%;background:${m>100?'var(--red)':m>50?'var(--amber)':'var(--green)'}"></div></div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Safety Thresholds</div>
+          <div class="threshold-row">
+            ${makeThreshRow('var(--green)','Safe Zone','< 50 ppm','Normal mine atmosphere, no immediate risk')}
+            ${makeThreshRow('var(--amber)','Warning Level','50–100 ppm','Elevated — increase ventilation, monitor closely')}
+            ${makeThreshRow('var(--red)','Danger Level','> 100 ppm','Critical — evacuate personnel immediately')}
+            <div class="th-row"><div class="th-dot2" style="background:#ff6600"></div><div class="th-row-info"><div class="th-row-label">LEL (Lower Explosive Limit)</div><div class="th-row-val">5% by volume = 50,000 ppm — explosion risk</div></div><div style="font-family:var(--mono);font-size:13px;color:#ff6600">50,000</div></div>
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Sensor Specifications</div>
+          ${infoRow('Sensor Model','MQ-4 (Methane, CNG)')}
+          ${infoRow('Detection Range','100 – 10,000 ppm')}
+          ${infoRow('Operating Voltage','5V DC ± 0.1V')}
+          ${infoRow('Preheat Time','≥ 20 seconds')}
+          ${infoRow('Response Time','< 10 seconds')}
+          ${infoRow('Sensitivity','Rs/R0 ratio variation')}
+          ${infoRow('Operating Temp','-20°C to +50°C')}
+          ${infoRow('Sensor Type','Electrochemical (SnO₂)')}
+          ${infoRow('Interface','Analog ADC (ESP32)')}
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">About Methane in Mining</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.7">
+            Methane (CH₄) is the primary component of firedamp — the most dangerous gas in coal mines. It is colourless, odourless, lighter than air (SG ≈ 0.55), and highly flammable between 5%–15% concentration in air (LEL–UEL). Explosions caused by firedamp ignition are responsible for a significant portion of fatal mining disasters. Continuous monitoring and early evacuation protocols are critical.
+          </div>
+        </div>`
+    },
+
+    co:{
+      title:'💨 Carbon Monoxide (CO) — Detailed Analysis',
+      sub:'MQ-7 Gas Sensor · Real-time monitoring',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Current Reading</div>
+          <div class="d-row three">
+            <div class="d-stat"><div class="d-stat-lbl">Live Value</div><div class="d-stat-val ${co>50?'danger':co>20?'warn':'ok'}">${co}</div><div class="d-stat-sub">ppm</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Status</div><div class="d-stat-val ${co>50?'danger':co>20?'warn':'ok'}">${co>50?'DANGER':co>20?'WARNING':'SAFE'}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">TWA (8-hr)</div><div class="d-stat-val ok">25 ppm</div><div class="d-stat-sub">OSHA limit</div></div>
+          </div>
+          <div class="d-stat-lbl" style="margin-bottom:4px">Level vs danger threshold (50 ppm)</div>
+          <div class="d-bar-wrap" style="height:6px"><div class="d-bar-fill" style="width:${Math.min(100,co/50*100)}%;background:${co>50?'var(--red)':co>20?'var(--amber)':'var(--green)'}"></div></div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Safety Thresholds</div>
+          <div class="threshold-row">
+            ${makeThreshRow('var(--green)','Safe Zone','< 20 ppm','Within OSHA permissible exposure limit')}
+            ${makeThreshRow('var(--amber)','Warning Level','20–50 ppm','Elevated exposure — ventilate and evacuate non-essential staff')}
+            ${makeThreshRow('var(--red)','Danger Level','> 50 ppm','Toxic — immediate evacuation required')}
+            ${makeThreshRow('#ff3300','IDLH Level','> 1,200 ppm','Immediately Dangerous to Life and Health')}
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Sensor Specifications</div>
+          ${infoRow('Sensor Model','MQ-7 (Carbon Monoxide)')}
+          ${infoRow('Detection Range','20 – 2,000 ppm')}
+          ${infoRow('Operating Voltage','5V DC (heating cycle)')}
+          ${infoRow('Heating Cycle','1.4V for 90s / 5V for 60s')}
+          ${infoRow('Response Time','< 15 seconds')}
+          ${infoRow('Interface','Analog ADC (ESP32)')}
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Health Effects by Concentration</div>
+          <table class="d-table">
+            <thead><tr><th>CO Level</th><th>Exposure Time</th><th>Effect</th></tr></thead>
+            <tbody>
+              <tr><td style="color:var(--green)">35 ppm</td><td>8 hours</td><td>Headache, dizziness</td></tr>
+              <tr><td style="color:var(--amber)">200 ppm</td><td>2–3 hours</td><td>Headache, disorientation</td></tr>
+              <tr><td style="color:var(--amber)">400 ppm</td><td>3 hours</td><td>Life-threatening</td></tr>
+              <tr><td style="color:var(--red)">800 ppm</td><td>45 min</td><td>Convulsions, death</td></tr>
+              <tr><td style="color:var(--red)">1,600 ppm</td><td>20 min</td><td>Death</td></tr>
+            </tbody>
+          </table>
+        </div>`
+    },
+
+    aqi:{
+      title:'🌫️ Air Quality Index (AQI) — Detailed Analysis',
+      sub:'MQ-135 Multi-gas Sensor · Real-time monitoring',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Current Reading</div>
+          <div class="d-row three">
+            <div class="d-stat"><div class="d-stat-lbl">Live AQI</div><div class="d-stat-val ${aqi>150?'warn':'ok'}">${aqi}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Category</div><div class="d-stat-val ${aqi>150?'warn':aqi>100?'warn':'ok'}">${aqi>200?'VERY POOR':aqi>150?'POOR':aqi>100?'MODERATE':'GOOD'}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Visibility</div><div class="d-stat-val">${aqi>150?'Reduced':'Normal'}</div></div>
+          </div>
+          <div class="d-stat-lbl" style="margin-bottom:4px">AQI level vs 250 scale</div>
+          <div class="d-bar-wrap" style="height:6px"><div class="d-bar-fill" style="width:${Math.min(100,aqi/250*100)}%;background:${aqi>150?'var(--red)':aqi>100?'var(--amber)':'var(--green)'}"></div></div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">AQI Scale Reference</div>
+          <div class="threshold-row">
+            ${makeThreshRow('var(--green)','Good','0–50','Air quality is satisfactory')}
+            ${makeThreshRow('#90EE90','Moderate','51–100','Acceptable; some pollutants may be concern')}
+            ${makeThreshRow('var(--amber)','Unhealthy (Sensitive)','101–150','Sensitive groups may be affected')}
+            ${makeThreshRow('#ff7b00','Unhealthy','151–200','Everyone may begin to experience effects')}
+            ${makeThreshRow('var(--red)','Very Unhealthy','201–300','Health alert — emergency conditions possible')}
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Sensor Specifications</div>
+          ${infoRow('Sensor Model','MQ-135 (Air Quality)')}
+          ${infoRow('Detects','NH₃, NOx, CO₂, Smoke, Benzene')}
+          ${infoRow('Detection Range','10 – 1,000 ppm (equivalent)')}
+          ${infoRow('Operating Voltage','5V DC ± 0.1V')}
+          ${infoRow('Load Resistance','20 kΩ (adjustable)')}
+          ${infoRow('Interface','Analog ADC (ESP32)')}
+        </div>`
+    },
+
+    environment:{
+      title:'🌡️ Environmental Conditions — Full Details',
+      sub:'DHT22 Temperature & Humidity Sensor',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Live Readings</div>
+          <div class="d-row">
+            <div class="d-stat"><div class="d-stat-lbl">Temperature</div><div class="d-stat-val ok">${temp}</div><div class="d-stat-sub">°C</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Humidity</div><div class="d-stat-val ok">${hum}</div><div class="d-stat-sub">% RH</div></div>
+          </div>
+          <div class="d-row">
+            <div class="d-stat"><div class="d-stat-lbl">Heat Index</div><div class="d-stat-val">${Math.round(temp + 0.33*(hum/100*6.105*Math.exp(17.27*temp/(237.3+temp)))-4.0)}</div><div class="d-stat-sub">°C (apparent)</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Dew Point</div><div class="d-stat-val">${Math.round(temp - (100-hum)/5)}</div><div class="d-stat-sub">°C</div></div>
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Mining Safety Thresholds</div>
+          <div class="threshold-row">
+            ${makeThreshRow('var(--green)','Safe Temp','< 35°C','Normal working conditions')}
+            ${makeThreshRow('var(--amber)','Warning Temp','35–40°C','Heat stress risk — increase breaks')}
+            ${makeThreshRow('var(--red)','Danger Temp','> 40°C','Work stoppage required')}
+            ${makeThreshRow('var(--green)','Safe Humidity','40–70% RH','Comfortable and safe')}
+            ${makeThreshRow('var(--amber)','High Humidity','> 80% RH','Respiratory discomfort, equipment corrosion risk')}
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">DHT22 Sensor Specifications</div>
+          ${infoRow('Sensor Model','DHT22 / AM2302')}
+          ${infoRow('Temperature Range','-40°C to +80°C')}
+          ${infoRow('Temp Accuracy','± 0.5°C')}
+          ${infoRow('Humidity Range','0–100% RH')}
+          ${infoRow('Humidity Accuracy','± 2–5% RH')}
+          ${infoRow('Sampling Rate','0.5 Hz (every 2s)')}
+          ${infoRow('Operating Voltage','3.3V – 5V DC')}
+          ${infoRow('Interface','Single-wire digital (GPIO)')}
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Heat Index Reference Table</div>
+          <table class="d-table">
+            <thead><tr><th>Temp (°C)</th><th>Humidity (%)</th><th>Heat Index</th><th>Risk</th></tr></thead>
+            <tbody>
+              <tr><td>27</td><td>40</td><td>27°C</td><td style="color:var(--green)">Safe</td></tr>
+              <tr><td>32</td><td>60</td><td>37°C</td><td style="color:var(--amber)">Caution</td></tr>
+              <tr><td>35</td><td>75</td><td>44°C</td><td style="color:var(--amber)">Warning</td></tr>
+              <tr><td>38</td><td>85</td><td>52°C</td><td style="color:var(--red)">Danger</td></tr>
+            </tbody>
+          </table>
+        </div>`
+    },
+
+    metal:{
+      title:'🧲 Metal Detection — Details',
+      sub:'Inductive Proximity Sensor · Rover-mounted',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Current Status</div>
+          <div class="d-row">
+            <div class="d-stat"><div class="d-stat-lbl">Detection</div><div class="d-stat-val ${state.metal?'warn':'ok'}">${state.metal?'DETECTED':'CLEAR'}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Trigger Count</div><div class="d-stat-val" id="d-metal-count">—</div></div>
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Sensor Specifications</div>
+          ${infoRow('Sensor Type','Inductive proximity sensor')}
+          ${infoRow('Detection Range','0–15 mm (ferrous metals)')}
+          ${infoRow('Output Type','Digital (HIGH/LOW)')}
+          ${infoRow('Operating Voltage','5V DC')}
+          ${infoRow('Target Material','Ferrous & non-ferrous metals')}
+          ${infoRow('Switching Frequency','Up to 500 Hz')}
+          ${infoRow('Interface','Digital GPIO (ESP32)')}
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Application in Mining</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.7">
+            Metal detection is critical for identifying buried ore deposits, detecting structural hazards like fallen reinforcement bars, and locating lost tools or equipment in active shafts. The rover continuously sweeps the path ahead using the inductive probe mounted on the front undercarriage.
+          </div>
+        </div>`
+    },
+
+    rover:{
+      title:'🤖 Rover Telemetry — Full Details',
+      sub:'ROVER-MK2 · ESP32-WROOM · LoRa SX1278',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Operational Status</div>
+          <div class="d-row three">
+            <div class="d-stat"><div class="d-stat-lbl">Status</div><div class="d-stat-val ok">ACTIVE</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Battery</div><div class="d-stat-val ok">${Math.round(state.battery)}%</div><div class="d-bar-wrap"><div class="d-bar-fill fill-green" style="width:${Math.round(state.battery)}%"></div></div></div>
+            <div class="d-stat"><div class="d-stat-lbl">WiFi Signal</div><div class="d-stat-val ok">${Math.round(state.signal)}%</div></div>
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Communication</div>
+          ${infoRow('WiFi RSSI',(-50-Math.round((100-state.signal)*.8))+' dBm','ok')}
+          ${infoRow('WiFi Channel','CH 6 (2.437 GHz)')}
+          ${infoRow('LoRa Band','433 MHz')}
+          ${infoRow('LoRa SNR','+8.4 dB')}
+          ${infoRow('LoRa Spreading Factor','SF7 (fastest)')}
+          ${infoRow('IP Address','192.168.4.23')}
+          ${infoRow('MAC Address','A4:CF:12:8B:3E:F1')}
+          ${infoRow('Protocol','MQTT over WiFi + LoRa backup')}
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Hardware Specifications</div>
+          ${infoRow('Microcontroller','ESP32-WROOM-32D (240 MHz)')}
+          ${infoRow('Flash Memory','4 MB')}
+          ${infoRow('RAM','520 KB SRAM')}
+          ${infoRow('Drive System','4WD (L298N motor driver)')}
+          ${infoRow('Max Speed','0.8 m/s')}
+          ${infoRow('Current Speed',+(0.1+Math.random()*.5).toFixed(1)+' m/s')}
+          ${infoRow('Camera','OV2640 (ESP32-CAM module)')}
+          ${infoRow('Battery Type','3S LiPo 11.1V 3000mAh')}
+          ${infoRow('Estimated Runtime','~2.5 hours at normal speed')}
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Location &amp; Navigation</div>
+          ${infoRow('Current Sector','Sector 3 — Shaft B')}
+          ${infoRow('GPS Coords','24.8012°N, 73.7045°E')}
+          ${infoRow('Depth','~42 m below surface')}
+          ${infoRow('Navigation Mode','Manual (remote control)')}
+          ${infoRow('Obstacle Avoidance','HC-SR04 Ultrasonic')}
+        </div>`
+    },
+
+    map:{
+      title:'🗺️ Mine Map — Shaft B Layout',
+      sub:'Sector 3 · Live rover tracking · Zone overview',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Rover Location</div>
+          ${infoRow('Current Sector','Sector 3 — Shaft B')}
+          ${infoRow('GPS Coordinates','24.8012°N, 73.7045°E')}
+          ${infoRow('Depth','~42 m below surface')}
+          ${infoRow('Nearest Exit','Exit Tunnel — ~85m south')}
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Zone Status</div>
+          <table class="d-table">
+            <thead><tr><th>Zone</th><th>Type</th><th>Status</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Zone A</td><td>Danger</td><td style="color:var(--red)">⚠ RESTRICTED</td><td>High methane history</td></tr>
+              <tr><td>Main Corridor</td><td>Transit</td><td style="color:var(--green)">● CLEAR</td><td>Active ventilation</td></tr>
+              <tr><td>Shaft A</td><td>Extraction</td><td style="color:var(--green)">● ACTIVE</td><td>3 personnel</td></tr>
+              <tr><td>Shaft B</td><td>Exploration</td><td style="color:var(--cyan)">● ROVER</td><td>Rover MK2 active</td></tr>
+              <tr><td>Exit Tunnel</td><td>Emergency</td><td style="color:var(--green)">● CLEAR</td><td>Evacuation route</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Emergency Contacts</div>
+          ${infoRow('Mine Control Room','+91-291-XXX-XXXX')}
+          ${infoRow('Emergency Services','112 / Mine Rescue Team')}
+          ${infoRow('Shaft B Supervisor','Rajesh Kumar (ext. 204)')}
+        </div>`
+    },
+
+    alerts:{
+      title:'🔔 Alert Feed — Full History',
+      sub:'All system events and threshold breaches',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Summary</div>
+          <div class="d-row three">
+            <div class="d-stat"><div class="d-stat-lbl">Total Events</div><div class="d-stat-val">${state.eventLog.length}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Active Alerts</div><div class="d-stat-val ${state.alertCount>0?'warn':'ok'}">${state.alertCount}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">System Status</div><div class="d-stat-val ${status==='DANGER'?'danger':status==='WARNING'?'warn':'ok'}">${status}</div></div>
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Event Log (All Events)</div>
+          <div style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto">
+            ${state.eventLog.length===0?'<div style="color:var(--text);font-size:12px;padding:8px">No events yet.</div>':
+            state.eventLog.map(a=>`
+              <div class="alert-item ${a.level==='DANGER'?'ai-danger':a.level==='WARNING'?'ai-warn':'ai-ok'}">
+                <div class="ai-icon">${a.level==='DANGER'?'🚨':a.level==='WARNING'?'⚠️':'✅'}</div>
+                <div class="ai-body"><div class="ai-msg ${a.level==='DANGER'?'danger':a.level==='WARNING'?'warn':''}">${a.msg}</div><div class="ai-ts">${a.ts}</div></div>
+              </div>`).join('')}
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Alert Thresholds Reference</div>
+          <table class="d-table">
+            <thead><tr><th>Sensor</th><th>Warning</th><th>Danger</th></tr></thead>
+            <tbody>
+              <tr><td>Methane (CH₄)</td><td style="color:var(--amber)">&gt; 50 ppm</td><td style="color:var(--red)">&gt; 100 ppm</td></tr>
+              <tr><td>Carbon Monoxide</td><td style="color:var(--amber)">&gt; 20 ppm</td><td style="color:var(--red)">&gt; 50 ppm</td></tr>
+              <tr><td>Air Quality</td><td style="color:var(--amber)">&gt; 150 AQI</td><td style="color:var(--red)">—</td></tr>
+            </tbody>
+          </table>
+        </div>`
+    },
+
+    status:{
+      title:`System Status — ${status}`,
+      sub:'Overall safety assessment · Click cards for sensor detail',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Overall Assessment</div>
+          <div class="d-row three">
+            <div class="d-stat"><div class="d-stat-lbl">Status</div><div class="d-stat-val ${status==='DANGER'?'danger':status==='WARNING'?'warn':'ok'}">${status}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Active Alerts</div><div class="d-stat-val ${state.alertCount>0?'warn':'ok'}">${state.alertCount}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Sensors OK</div><div class="d-stat-val ok">6/6</div></div>
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">All Sensor Snapshot</div>
+          ${infoRow('Methane (CH₄)',m+' ppm',m>100?'danger':m>50?'warn':'ok')}
+          ${infoRow('Carbon Monoxide',co+' ppm',co>50?'danger':co>20?'warn':'ok')}
+          ${infoRow('Air Quality Index',aqi+' AQI',aqi>150?'warn':'ok')}
+          ${infoRow('Temperature',temp+' °C','ok')}
+          ${infoRow('Humidity',hum+' %','ok')}
+          ${infoRow('Metal Detection',state.metal?'DETECTED':'Clear',state.metal?'warn':'ok')}
+          ${infoRow('Rover Battery',Math.round(state.battery)+'%',state.battery<30?'warn':'ok')}
+          ${infoRow('WiFi Signal',Math.round(state.signal)+'%',state.signal<40?'warn':'ok')}
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Emergency Procedure (if DANGER)</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.8">
+            1. Activate mine alarm system immediately<br>
+            2. Broadcast evacuation on all channels<br>
+            3. All personnel move to Exit Tunnel (south)<br>
+            4. Stop all ignition sources — no mobile devices<br>
+            5. Contact Mine Control Room: +91-291-XXX-XXXX<br>
+            6. Do not re-enter until gas levels confirmed safe<br>
+            7. Document incident for DGMS reporting
+          </div>
+        </div>`
+    },
+
+    gasChart:{
+      title:'📈 Gas Concentration Chart — Expanded View',
+      sub:'Methane & CO · Live 25-point rolling window',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Current Values</div>
+          <div class="d-row">
+            <div class="d-stat"><div class="d-stat-lbl">Methane (CH₄)</div><div class="d-stat-val ${m>100?'danger':m>50?'warn':'ok'}">${m} ppm</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Carbon Monoxide</div><div class="d-stat-val ${co>50?'danger':co>20?'warn':'ok'}">${co} ppm</div></div>
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Expanded Chart (Last 25 readings)</div>
+          <div class="d-chart-wrap" style="height:200px"><canvas id="d-gas-chart" role="img" aria-label="expanded gas chart"></canvas></div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Statistical Summary</div>
+          ${infoRow('CH₄ Min (session)',Math.min(...gasM)>0?Math.min(...gasM)+' ppm':'—')}
+          ${infoRow('CH₄ Max (session)',Math.max(...gasM)>0?Math.max(...gasM)+' ppm':'—')}
+          ${infoRow('CO Min (session)', Math.min(...gasCO)>0?Math.min(...gasCO)+' ppm':'—')}
+          ${infoRow('CO Max (session)', Math.max(...gasCO)>0?Math.max(...gasCO)+' ppm':'—')}
+        </div>`
+    },
+
+    envChart:{
+      title:'📈 Environmental Trend — Expanded View',
+      sub:'Temperature & Humidity · Live 25-point rolling window',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Current Values</div>
+          <div class="d-row">
+            <div class="d-stat"><div class="d-stat-lbl">Temperature</div><div class="d-stat-val ok">${temp}°C</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Humidity</div><div class="d-stat-val ok">${hum}%</div></div>
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Expanded Chart (Last 25 readings)</div>
+          <div class="d-chart-wrap" style="height:200px"><canvas id="d-env-chart" role="img" aria-label="expanded env chart"></canvas></div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Statistical Summary</div>
+          ${infoRow('Temp Min',Math.min(...envT)>0?Math.min(...envT)+'°C':'—')}
+          ${infoRow('Temp Max',Math.max(...envT)>0?Math.max(...envT)+'°C':'—')}
+          ${infoRow('Hum Min', Math.min(...envH)>0?Math.min(...envH)+'%':'—')}
+          ${infoRow('Hum Max', Math.max(...envH)>0?Math.max(...envH)+'%':'—')}
+        </div>`
+    },
+
+    log:{
+      title:'📋 Full Data Log',
+      sub:'Complete session history · All sensor readings',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Session Summary</div>
+          <div class="d-row three">
+            <div class="d-stat"><div class="d-stat-lbl">Total Readings</div><div class="d-stat-val">${state.dp}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Sample Rate</div><div class="d-stat-val">2.5s</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Session Status</div><div class="d-stat-val ok">ACTIVE</div></div>
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Full Log Table</div>
+          <div style="overflow-x:auto">
+            <table class="d-table" style="width:100%;white-space:nowrap">
+              <thead><tr><th>#</th><th>Time</th><th>CH₄</th><th>CO</th><th>AQI</th><th>Temp</th><th>Hum</th><th>Metal</th><th>Status</th></tr></thead>
+              <tbody>
+                ${logRows.map(r=>{const d=r.raw;const s=d.status;const tc=s==='DANGER'?'tg-danger':s==='WARNING'?'tg-warn':'tg-ok';
+                  return`<tr><td style="color:var(--dim)">${d.rowNum}</td><td>${d.ts}</td><td class="${d.m>100?'num-danger':d.m>50?'num-warn':'num-ok'}">${d.m}</td><td class="${d.co>50?'num-danger':d.co>20?'num-warn':'num-ok'}">${d.co}</td><td>${d.aqi}</td><td>${d.temp}</td><td>${d.hum}</td><td style="color:${d.metal?'var(--amber)':'var(--dim)'}">${d.metal?'YES':'—'}</td><td><span class="tg ${tc}">${s}</span></td></tr>`}).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`
+    },
+
+    analytics:{
+      title:'📊 Analytics Overview',
+      sub:'Session statistics and trend analysis',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Session Statistics</div>
+          <div class="d-row three">
+            <div class="d-stat"><div class="d-stat-lbl">Total Readings</div><div class="d-stat-val">${state.dp}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Alert Events</div><div class="d-stat-val ${state.eventLog.filter(e=>e.level!=='SAFE').length>0?'warn':'ok'}">${state.eventLog.filter(e=>e.level!=='SAFE').length}</div></div>
+            <div class="d-stat"><div class="d-stat-lbl">Safe Readings</div><div class="d-stat-val ok">${logRows.filter(r=>r.raw.status==='SAFE').length}</div></div>
+          </div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Session Averages</div>
+          ${infoRow('Avg Methane',gasM.length?Math.round(gasM.reduce((a,b)=>a+b,0)/gasM.length)+' ppm':'—')}
+          ${infoRow('Avg CO',gasCO.length?Math.round(gasCO.reduce((a,b)=>a+b,0)/gasCO.length)+' ppm':'—')}
+          ${infoRow('Avg Temperature',envT.length?(envT.reduce((a,b)=>a+b,0)/envT.length).toFixed(1)+'°C':'—')}
+          ${infoRow('Avg Humidity',envH.length?Math.round(envH.reduce((a,b)=>a+b,0)/envH.length)+'%':'—')}
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Sensor Health</div>
+          ${infoRow('MQ-4 (Methane)','Online · Normal','ok')}
+          ${infoRow('MQ-7 (CO)','Online · Normal','ok')}
+          ${infoRow('MQ-135 (AQI)','Online · Normal','ok')}
+          ${infoRow('DHT22 (Temp/Hum)','Online · Normal','ok')}
+          ${infoRow('Inductive Probe','Online · Normal','ok')}
+          ${infoRow('ESP32 Uptime',pad(Math.floor(state.seconds/3600))+':'+pad(Math.floor((state.seconds%3600)/60))+':'+pad(state.seconds%60),'ok')}
+        </div>`
+    },
+
+    settings:{
+      title:'⚙️ System Configuration',
+      sub:'Alert thresholds and sensor settings',
+      html:`
+        <div class="d-section">
+          <div class="d-section-title">Alert Thresholds</div>
+          <table class="d-table">
+            <thead><tr><th>Sensor</th><th>Warning</th><th>Danger</th><th>Unit</th></tr></thead>
+            <tbody>
+              <tr><td>Methane (CH₄)</td><td style="color:var(--amber)">50</td><td style="color:var(--red)">100</td><td>ppm</td></tr>
+              <tr><td>Carbon Monoxide</td><td style="color:var(--amber)">20</td><td style="color:var(--red)">50</td><td>ppm</td></tr>
+              <tr><td>Air Quality (AQI)</td><td style="color:var(--amber)">150</td><td style="color:var(--red)">—</td><td>AQI</td></tr>
+              <tr><td>Temperature</td><td style="color:var(--amber)">35</td><td style="color:var(--red)">40</td><td>°C</td></tr>
+              <tr><td>Humidity</td><td style="color:var(--amber)">80</td><td style="color:var(--red)">—</td><td>% RH</td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:10px;font-family:var(--mono);font-size:9px;color:var(--text)">⚠ Thresholds follow DGMS (India) and OSHA standards. To modify, contact system administrator.</div>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Data Collection Settings</div>
+          ${infoRow('Sampling Interval','2.5 seconds')}
+          ${infoRow('Chart Window','25 data points')}
+          ${infoRow('Log Retention','Session only (export to save)')}
+          ${infoRow('Alert Debounce','Status change detection')}
+          ${infoRow('Communication','MQTT + HTTP API fallback')}
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">System Information</div>
+          ${infoRow('Dashboard Version','SmartMine OS v2.4.1')}
+          ${infoRow('Firmware','ESP32 FW v1.2.3')}
+          ${infoRow('Standards','DGMS · IS:14489 · OSHA 1910.94')}
+          ${infoRow('Location','Shaft B · Sector 3 · 42m depth')}
+          ${infoRow('Operator','Mine Control Room')}
+        </div>`
+    }
+
+  };
+
+  const def = drawerDefs[type];
+  if(!def) return;
+
+  $('drawerTitle').textContent = def.title;
+  $('drawerSub').textContent = def.sub;
+  if(!liveUpdate) $('drawerBody').innerHTML = def.html;
+  else {
+    // Only update numeric values in place for live drawers
+    $('drawerBody').innerHTML = def.html;
+  }
+
+  // Create drawer charts after render
+  if(!liveUpdate){
+    if(type==='gasChart'){
+      setTimeout(()=>{
+        if(drawerChart1){drawerChart1.destroy();drawerChart1=null;}
+        const c=$('d-gas-chart');
+        if(c) drawerChart1=new Chart(c.getContext('2d'),{type:'line',data:{labels:[...chartLabels],datasets:[
+          {label:'CH₄',data:[...gasM],borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.1)',tension:.4,pointRadius:2,borderWidth:2,fill:true},
+          {label:'CO', data:[...gasCO],borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,0.07)',tension:.4,pointRadius:2,borderWidth:1.5,fill:true,borderDash:[5,4]}
+        ]},options:{...chartCfg,responsive:true,maintainAspectRatio:false}});
+      },80);
+    }
+    if(type==='envChart'){
+      setTimeout(()=>{
+        if(drawerChart2){drawerChart2.destroy();drawerChart2=null;}
+        const c=$('d-env-chart');
+        if(c) drawerChart2=new Chart(c.getContext('2d'),{type:'line',data:{labels:[...chartLabels],datasets:[
+          {label:'Temp',data:[...envT],borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.1)',tension:.4,pointRadius:2,borderWidth:2,fill:true},
+          {label:'Hum', data:[...envH],borderColor:'#818cf8',backgroundColor:'rgba(129,140,248,0.07)',tension:.4,pointRadius:2,borderWidth:1.5,fill:true}
+        ]},options:{...chartCfg,responsive:true,maintainAspectRatio:false}});
+      },80);
+    }
+  }
+}
+
+// ── EXPORT ────────────────────────────────────────────────────
+function exportCSV(){
+  const h='#,Timestamp,CH4_ppm,CO_ppm,AQI,Temp_C,Hum_%,Metal,Status\n';
+  const blob=new Blob([h+logRows.map(r=>r.csv).join('\n')],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='mining_log_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+setTimeout(()=>pushAlert('System initialized — all sensors online and nominal','SAFE',new Date().toLocaleTimeString()),300);
+update();
+setInterval(update,2500);
+setInterval(()=>{ state.signal=Math.max(40,Math.min(95,state.signal+(Math.random()-.48)*3)); },5000);
+</script>
+</body>
+</html>
